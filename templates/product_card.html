@@ -1,0 +1,188 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <title>Product Card</title>
+    {% include "header/header.html" %}
+</head>
+<body class='snippet-body'>
+<div id="app" class="container mt-1">
+    <div class="row mt-1 p-2"
+         style="border-radius: 5px;
+                position: sticky; top: 0; z-index: 100; background-color: whitesmoke"
+    >
+        <a>
+            <button
+                    type="button"
+                    class="btn btn-outline-primary ml-1 mr-1"
+                    @click="searchByCategory('all')"
+            >
+                All
+            </button>
+        </a>
+        <a
+                v-for="(category, index) in category_list"
+                :key="'category_'+index"
+        >
+            <button
+                    type="button"
+                    class="btn btn-outline-primary ml-1 mr-1 active"
+                    style="text-transform: uppercase"
+                    @click="searchByCategory(category.id)"
+            >
+                [[ category.name ]]
+            </button>
+        </a>
+        <div class="input-group flex-nowrap mt-2">
+            <input
+                    v-model="txt_src"
+                    type="text"
+                    class="form-control"
+                    placeholder="name, code, barcode ..."
+                    @input="liveSearch"
+            >
+        </div>
+    </div>
+    <br>
+    <br>
+    <div class="row" id="product_list">
+        <div
+                v-for="(item, index) in this.product_list"
+                class="col-md-3 mb-4">
+            <div class="card">
+                <div class="image-container">
+                    <div class="first">
+                        <div class="d-flex justify-content-between align-items-center"
+                        ><span
+                                style="background-color: #366f69; font-size: 12px"
+                                class="discount">[[ item.category ]]</span> <span
+                                class="wishlist"><i class="fa fa-heart-o"></i></span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center"><span
+                                style="font-size: 14px"
+                                class="discount">-0%</span> <span
+                                class="wishlist"><i class="fa fa-heart-o"></i></span>
+                        </div>
+                    </div>
+                    <a href="/detail/item.name" target="_blank">
+                        <img src="{{ getBaseUrl() }}/static/sting-energy-drink.jpeg"
+                             class="img-fluid rounded thumbnail-image">
+                    </a>
+
+                </div>
+                <div class="product-detail-container p-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="dress-name">[[ item.name ]]</h5>
+                        <div class="d-flex flex-column mb-2">
+                            <span class="new-price">[[ item.price ]]</span>
+                            <small class="old-price text-right" style="font-weight: lighter; font-size: 14px">
+                                <del>
+                                    $0
+                                </del>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center pt-1">
+                        <div class="color-select d-flex "><input type="button" name="grey" class="btn-1 creme">
+                            <input
+                                    type="button"
+                                    name="red"
+                                    class="btn-1 red ml-2">
+                            <input type="button" name="blue" class="btn-1 blue ml-2"></div>
+                        <div class="d-flex "><span class="item-size mr-2 btn-1" type="button">S</span> <span
+                                class="item-size mr-2 btn-1" type="button">M</span> <span class="item-size btn-1"
+                                                                                          type="button">L</span>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center pt-1">
+                        <div><i class="fa fa-star-o rating-star"></i> <span class="rating-number">4.8</span></div>
+                        <span class="buy">BUY +</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type='text/javascript'></script>
+</body>
+<script>
+    var vue_obj = new Vue({
+        el: '#app',
+        delimiters: ['[[', ']]'],
+        data: {
+            color: 'bg-primary',
+            is_start: false,
+            product_list: [],
+            category_list: [],
+            txt_src: null,
+            typingTimer: null,
+            doneTypingInterval: 500,
+        },
+        methods: {
+            changeColor() {
+                if (this.color == 'bg-primary') {
+                    this.color = 'bg-danger'
+                } else {
+                    this.color = 'bg-primary'
+                }
+            },
+            startInterval() {
+                this.is_start = true
+                this.intervalId = setInterval(() => {
+                    this.changeColor()
+                }, 1000);
+            },
+            stopInterval() {
+                this.is_start = false
+                clearInterval(this.intervalId);
+                this.message = "Interval stopped.";
+            },
+            liveSearch(evt) {
+                let vm = this
+                clearTimeout(this.typingTimer)
+                this.typingTimer = setTimeout(function () {
+                     $("#product_list").LoadingOverlay("show");
+                    let payload = vm.txt_src.trim()
+                    let url = `{{ getBaseUrl() }}/get_product_by_filter?txt_src=${payload}`
+                    axios.get(url).then(response => {
+                        vm.product_list = response.data
+                         $("#product_list").LoadingOverlay("hide");
+                    }).catch(function (error) {
+                        alert('error: ' + error.message)
+                         $("#product_list").LoadingOverlay("hide");
+                    });
+                }, this.doneTypingInterval)
+            },
+            searchByCategory(category_id) {
+                $("#product_list").LoadingOverlay("show");
+                let input = {
+                    'category_id': category_id
+                }
+                axios.post('{{ getBaseUrl() }}/get_product_by_category', input).then(response => {
+                    this.product_list = response.data
+                   $("#product_list").LoadingOverlay("hide");
+                }).catch(function (error) {
+                    alert('error: ' + error.message)
+                   $("#product_list").LoadingOverlay("hide");
+                });
+            },
+        },
+        created() {
+            $.LoadingOverlay("show");
+        },
+        mounted() {
+            axios.get('{{ getBaseUrl() }}/get_all_product').then(response => {
+                this.product_list = response.data.product
+                this.category_list = response.data.category
+                $.LoadingOverlay("hide");
+            }).catch(function (error) {
+                alert('error: ' + error.message)
+                $.LoadingOverlay("hide");
+            });
+        }
+    });
+</script>
+</html>
